@@ -1,0 +1,22 @@
+{
+  "name": "labflow",
+  "version": "2.0.0",
+  "description": "LabFlow — 研究室の進捗ナビゲーター (Cloud Run + Firestore + Gemini)",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "start:local": "node --env-file=.env server.js",
+    "dev": "AUTH_MODE=dev STORE=memory AI_MODE=mock PORT=8080 node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@google/genai": "3.0.0",
+    "express": "5.3.0",
+    "firebase-admin": "14.5.0"
+  }
+}

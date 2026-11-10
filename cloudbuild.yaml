@@ -1,0 +1,45 @@
+# =============================================================
+# CI/CD 用（任意）: GitHub への push で テスト → ビルド → Cloud Run へデプロイ
+#   Cloud Build のトリガーにこのファイルを指定してください。
+#   事前に Artifact Registry のリポジトリを作成:
+#     gcloud artifacts repositories create labflow --repository-format=docker --location=asia-northeast1
+#   環境変数ファイル（deploy/env.yaml）はリポジトリにコミットしない運用を推奨するため、
+#   ここでは「既存サービスの環境変数を引き継ぐ」形でイメージだけを更新します。
+#   トリガーのサービスアカウントには roles/run.admin, roles/iam.serviceAccountUser,
+#   roles/artifactregistry.writer が必要です。
+# =============================================================
+substitutions:
+  _REGION: asia-northeast1
+  _SERVICE: labflow
+  _REPO: labflow
+
+steps:
+  - id: test
+    name: node:22-slim
+    entrypoint: bash
+    args: ['-c', 'npm ci && npm test']
+
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA', '.']
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA']
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --quiet
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
